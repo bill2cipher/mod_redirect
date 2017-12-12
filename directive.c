@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
-#include "httpd.h"  
-#include "http_config.h"  
-#include "http_protocol.h"  
-#include "ap_config.h"
+#include "common.h"
 
 extern RedirectConfig config;
 
@@ -20,13 +13,12 @@ int redirect_config_checker(apr_pool_t* pconf, apr_pool_t* plog,
     return OK;
   }
 
-  bool check_cookie = config.cookie_op == NULL || 
-                      strcmp(config.cookie_op, "c") ||
-                      strcmp(config.cookie_op, "nc");
-  if (check_cookie && config.cookie_op != NULL) {
-    check_cookie = config.cookie_key != NULL &&
-                   config.cookie_value != NULL;
+  bool check_cookie = config.cookie_op != 3;
+  if (config.cookie_op == 1 || config.cookie_op == 2) {
+    check_cookie &= (config.cookie_key != NULL) &&
+                    (config.cookie_value != NULL);
   }
+
   if (!check_cookie) {
     ap_log_error(APLOG_MARK, APLOG_ERROR, NULL, s,
       "mo_redirect: check cookie config failed, pls check redirect_cookie");
@@ -34,11 +26,9 @@ int redirect_config_checker(apr_pool_t* pconf, apr_pool_t* plog,
     return OK;
   }
 
-  bool check_refer = config.refer_op == NULL ||
-                     strcmp(config.refer_op, "c") ||
-                     strcmp(config.refer_op, "nc");
-  if (check_refer && config.refer_value == NULL) {
-    check_refer = false;
+  bool check_refer = config.refer_op != 3;
+  if (config.refer_op == 1 || config.refer_op == 2) {
+    check_refer &= config.refer_value != NULL;
   }
   if (!check_refer) {
     config.enabled = false;
@@ -47,11 +37,9 @@ int redirect_config_checker(apr_pool_t* pconf, apr_pool_t* plog,
     return OK;
   }
   
-  bool check_uri = config.uri_op == NULL ||
-                   strcmp(config.uri_op, "c") ||
-                   strcmp(config.uri_op, "nc");
-  if (check_uri && config.uri_value == NULL) {
-    check_uri = false;
+  bool check_uri = config.uri_op != 3;
+  if (config.uri_op == 1 || config.uri_op == 2) {
+    check_uri &= config.uri_value != NULL;
   }
   if (!check_uri) {
     config.enabled = false;
@@ -77,20 +65,44 @@ const char* redirect_probability(cmd *cmd, void *cfg, const char *arg) {
 }
 
 const char* redirect_cookie(cmd *cmd, void *cfg, const char *arg1, const char *arg2, const char *arg3) {
-  config.cookie_op = arg1;
+  if (!strcmp(arg1, "c")) {
+    config.cookie_op = 1;
+  } else (!strcmp(arg1, "nc")) {
+    config.cookie_op = 2;
+  } else {
+    ap_log_error(APLOG_MARK, APLOG_ERROR, NULL, s,
+      "mo_redirect: check cookie op failed, pls check redirect_cookie");
+    config.cookie_op = 3;
+  }
   config.cookie_key = arg2;
   config.cookie_value = arg3;
   return NULL;
 }
 
 const char* redirect_refer(cmd *cmd, void *cfg, const char *arg1, const char *arg2) {
-  config.refer_op = arg1;
+  if (!strcmp(arg1, "c")) {
+    config.refer_op = 1;
+  } else (!strcmp(arg1, "nc")) {
+    config.refer_op = 2;
+  } else {
+    ap_log_error(APLOG_MARK, APLOG_ERROR, NULL, s,
+      "mo_redirect: check refer op failed, pls check redirect_refer");
+    config.refer_op = 3;
+  }
   config.refer_value = arg2;
   return NULL;
 }
 
 const char* redirect_uri(cmd *cmd, void *cfg, const char *arg1, const char *arg2) {
-  config.uri_op = arg1;
+  if (!strcmp(arg1, "c")) {
+    config.uri_op = 1;
+  } else (!strcmp(arg1, "nc")) {
+    config.uri_op = 2;
+  } else {
+    ap_log_error(APLOG_MARK, APLOG_ERROR, NULL, s,
+      "mo_redirect: check uri op failed, pls check redirect_uri");
+    config.uri_op = 3;
+  }
   config.uri_value = arg2;
   return NULL;
 }
