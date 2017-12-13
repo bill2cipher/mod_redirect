@@ -11,6 +11,8 @@
 #include "ap_regex.h"
 #include "http_log.h"
 #include "http_request.h"
+#include "apr.h"
+#include "apr_strings.h"
 
 
 typedef struct{
@@ -48,6 +50,7 @@ void init_rand() {
 }
 
 bool conform_rand(float probability) {
+  return true;
   float next = rand()/(RAND_MAX+1.0);
   if (next < probability) {
     return true;
@@ -106,6 +109,14 @@ int redirect_config_checker(apr_pool_t* pconf, apr_pool_t* plog, apr_pool_t* pte
       "mod_redirect: target not configed");
     return OK;
   }
+
+  if ((config.refer_op == 0) && (config.uri_op == 0) && (config.cookie_op == 0)) {
+    config.enabled = false;
+    ap_log_error(APLOG_MARK, APLOG_ERR, NULL, s,
+      "mod_redirect: none of the three rule set, disable redirect");
+    return OK;
+  }
+
   ap_log_error(APLOG_MARK, APLOG_INFO, NULL, s,
     "mod_redirect: check config success. probability(%f); enabled(%d); target(%s);", 
     config.probability, config.enabled, config.target);
@@ -266,23 +277,42 @@ static bool conform_rule(request_rec *r){
   const apr_array_header_t *fields;
   int i;
   apr_table_entry_t *e = 0;
-  bool refer_check = false, cookie_check=false, uri_check=false;
+  bool refer_check = false, cookie_check = false, uri_check = false, result = true, rule_set = false;
+  char* request_path = NULL;
   fields = apr_table_elts(r->headers_in);
   e = (apr_table_entry_t *)fields->elts;
   for (i = 0; i < fields->nelts; i++) {
     if (strcmp(e[i].key, "Referer") == 0) {
       refer_check = conform_refer(e[i].val);
+      ap_log_error(APLOG_MARK, APLOG_DEBUG, NULL, r->server, 
+        "mod_redirect: check refer %s/%s with conform %d", e[i].val, config.refer_value, refer_check);
+    } else if (strcmp(e[i].key, "Cookie") == 0) {
+      ap_log_error(APLOG_MARK, APLOG_DEBUG, NULL, r->server, 
+        "mod_redirect: before cookie check %d", e[i].val, config.refer_value, refer_check);
+       cookie_check = conform_cookie(e[i].val);
     }
-    // } else if (strcmp(e[i].key, "Cookie") == 0) {
-    //   cookie_check = conform_cookie(e[i].value);
-    // }
   }
 
-  ap_rprintf(r, "request uri: %s", r->uri);
-  ap_rprintf(r, "request unparsed uri: %s", r->unparsed_uri);
-  ap_rprintf(r, "request parsed uri: %s", r->parsed_uri);
-  uri_check = conform_uri(r->uri);
-  if (refer_check && cookie_check && uri_check) {
+  ap_log_error(APLOG_MARK, APLOG_DEBUG, NULL, r->server, 
+    "before uri check", e[i].val, config.refer_value, refer_check);
+  request_path = apr_pstrcat(r->pool, r->hostname, r->unparsed_uri);
+  uri_check = conform_uri(request_path);
+  ap_log_error(APLOG_MARK, APLOG_DEBUG, NULL, r->server,
+     "mod_redirect: check uri %s/%s with conform %d", request_path, config.uri_value, uri_check);
+     
+  if ((config.uri_op != 0) && (config.uri_op != 3)) {
+    rule_set = true;
+    result = result && uri_check;
+  }
+  if ((config.refer_op != 0) && (config.uri_op != 3)) {
+    rule_set = true;
+    result = result && refer_check;
+  }
+  if ((config.cookie_op != 0) && (config.cookie_op != 3)) {
+    rule_set = true;
+    result = result && cookie_check;
+  }
+  if (rule_set && result) {
     return true;
   }
   return false;
