@@ -54,3 +54,6 @@ dkms.conf
 .libs
 *.slo
 *.lai
+*.xcodeproj
+.DS_Store
+mod_redirect
