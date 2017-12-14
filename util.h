@@ -8,9 +8,9 @@
 #include <string.h>
 
 #define log_header "mod_redirect: "
-#define error(...) ap_log_error(APLOG_MARK, APLOG_ERR, NULL, __VA_ARGS__)
-#define debug(...) ap_log_error(APLOG_MARK, APLOG_DEBUG, NULL, __VA_ARGS__)
-#define info(...)  ap_log_error(APLOG_MARK, APLOG_INFO, NULL, __VA_ARGS__)
+#define error(...) ap_log_error(APLOG_MARK, APLOG_ERR, 0, __VA_ARGS__)
+#define debug(...) ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, __VA_ARGS__)
+#define info(...)  ap_log_error(APLOG_MARK, APLOG_INFO, 0, __VA_ARGS__)
 
 void init_rand(void);
 bool conform_rand(float probability);

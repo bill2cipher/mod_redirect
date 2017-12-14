@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "httpd.h"
 #include "ap_config.h"
 #include "ap_provider.h"
 #include "ap_regex.h"
@@ -14,12 +15,21 @@
 #include "http_log.h"
 #include "http_protocol.h"
 #include "http_request.h"
-#include "httpd.h"
 
 #include "util.h"
 #include "config.h"
 
-extern RedirectConfig config;
+
+RedirectConfig config = {
+    .filepath = NULL,
+    .probability = 0,
+    .cookie_key = NULL,
+    .cookie_op = 0,
+    .refer_op = 0,
+    .uri_op = 0,
+    .target = NULL,
+    .enabled = false,
+};
 
 static bool contain_values(const char* value, char* target[]) {
     int i = 0;
@@ -120,7 +130,7 @@ static bool conform_rule(request_rec *r){
 }
 
 static int redirect_handler(request_rec *r) {
-    debug(r->server, log_header"enter redirect handler");
+    debug(r->server, log_header"enter redirect handler with file %s", config.filepath);
     
     if (!read_config(r)) {
         info(r->server, log_header"decline for read config failed");
@@ -138,16 +148,32 @@ static int redirect_handler(request_rec *r) {
         info(r->server, log_header"decline for rule not conform");
         return DECLINED;
     }
-    
-    r->content_type = "text/html";
-    apr_table_set(r->headers_out, "Location", "http://www.baidu.com");
-    return HTTP_SEE_OTHER;
+
+    apr_table_set(r->headers_out, "Location", config.target);
+    return HTTP_MOVED_TEMPORARILY;
 }
 
 
 static void redirect_register_hooks(apr_pool_t *p) {
     ap_hook_handler(redirect_handler, NULL, NULL, APR_HOOK_MIDDLE);
 }
+
+const char* set_config_path(cmd_parms* cmd, void* cfg, const char* arg) {
+    config.filepath = arg;
+    debug(cmd->server, log_header"set config file %s", config.filepath);
+    return NULL;
+}
+
+static const command_rec redirect_directives[] = {
+    AP_INIT_TAKE1(
+        "redirect_config",
+        set_config_path,
+        NULL,
+        RSRC_CONF,
+        "set config file path of redirect"
+    ),
+    { NULL }
+};
 
 /* Dispatch list for API hooks */
 module AP_MODULE_DECLARE_DATA redirect_module = {
@@ -156,7 +182,7 @@ module AP_MODULE_DECLARE_DATA redirect_module = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    redirect_directives,
     redirect_register_hooks
 };
 

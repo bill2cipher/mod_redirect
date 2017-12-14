@@ -8,7 +8,7 @@
 #define MAX_CONFIG_VALUE_LEN 5
 
 typedef struct{
-    char* filepath;
+    const char* filepath;
     float probability;
     char* cookie_key;
     char* cookie_value[MAX_CONFIG_VALUE_LEN + 1];
@@ -21,19 +21,6 @@ typedef struct{
     bool enabled;
 } RedirectConfig;
 
-static RedirectConfig config = {
-    .filepath = NULL,
-    .probability = 0,
-    .cookie_key = NULL,
-    .cookie_value = NULL,
-    .cookie_op = 0,
-    .refer_value = NULL,
-    .refer_op = 0,
-    .uri_value = NULL,
-    .uri_op = 0,
-    .target = NULL,
-    .enabled = false,
-};
 
 bool read_config(request_rec* r);
 #endif /* config_h */

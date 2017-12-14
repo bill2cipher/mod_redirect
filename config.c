@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "httpd.h"
 #include "ap_config.h"
 #include "ap_provider.h"
 #include "ap_regex.h"
@@ -13,14 +14,14 @@
 #include "http_log.h"
 #include "http_protocol.h"
 #include "http_request.h"
-#include "httpd.h"
 
 #include "config.h"
 #include "util.h"
 
-#define MAX_LINE_LEN 1024
 
 extern RedirectConfig config;
+
+#define MAX_LINE_LEN 1024
 
 void reset_array(char* arr[], int len) {
     int i = 0;
@@ -174,7 +175,7 @@ bool parse_target(request_rec* r, char* line) {
         return false;
     }
     config.target = value;
-    debug(r->server, log_header"parse target success: %f", config.target);
+    debug(r->server, log_header"parse target success: %s", config.target);
     return true;
 }
 
@@ -203,23 +204,14 @@ bool parse_enabled(request_rec* r, char* line) {
     }
 }
 
-bool read_config(request_rec* r) {
-    apr_status_t status;
-    ap_configfile_t* f = NULL;
+bool parse_config(request_rec* r, ap_configfile_t* f) {
     char line[MAX_LINE_LEN];
     char* copy = NULL;
     bool valid = true, op_set = false;
     
     // first reset all config values
     reset_config();
-    if (config.filepath == NULL) {
-        return false;
-    }
-    status = ap_pcfg_openfile(&f, r->pool, config.filepath);
-    if (status != APR_SUCCESS) {
-        debug(r->server, "mod_redirect: read config file failed");
-        return false;
-    }
+
     while(!(ap_cfg_getline(line, MAX_LINE_LEN, f))) {
         copy = apr_pstrdup(r->pool, line);
         if (start_with(copy, "probability")) {
@@ -269,4 +261,20 @@ bool read_config(request_rec* r) {
     return true;
 }
 
-
+bool read_config(request_rec* r) {
+    apr_status_t status;
+    ap_configfile_t* f = NULL;
+    bool parse_result;
+    if (config.filepath == NULL) {
+        debug(r->server, log_header"config file not set %s", config.filepath);
+        return false;
+    }
+    status = ap_pcfg_openfile(&f, r->pool, config.filepath);
+    if (status != APR_SUCCESS) {
+        debug(r->server, log_header"read config file failed %d", status);
+        return false;
+    }
+    parse_result = parse_config(r, f);
+    ap_cfg_closefile(f);
+    return parse_result;
+}
