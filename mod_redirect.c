@@ -55,11 +55,11 @@ static bool conform_cookie(request_rec* r, const char* cookies) {
     }
     copy = apr_pstrdup(r->pool, cookies);
     while(true) {
-        key = apr_strtok(copy, "=", &last);
+        key = apr_strtok(copy, " =", &last);
         if (!key) {
             break;
         }
-        value = apr_strtok(NULL, ";", &last);
+        value = apr_strtok(NULL, " ;", &last);
         if (!value) {
             break;
         }

@@ -45,13 +45,13 @@ void reset_config() {
 
 bool parse_probability(request_rec* r, char *line) {
     char* last = NULL;
-    char* cmd = apr_strtok(line, " ", &last);
+    char* cmd = apr_strtok(line, SEP_CHAR, &last);
     if (!cmd || apr_strnatcmp(cmd, "probability") != 0) {
         config.probability = 0;
         error(r->server, log_header"disable probability for unknown error %s.", cmd);
         return false;
     }
-    char* value = apr_strtok(NULL, " ", &last);
+    char* value = apr_strtok(NULL, SEP_CHAR, &last);
     if (!value) {
         error(r->server, log_header"probability cmd value not set");
         config.probability = 0;
@@ -66,7 +66,7 @@ bool parse_cookie(request_rec* r, char* line) {
     char* last = NULL;
     char* value = NULL;
     char* key = NULL;
-    char* cmd = apr_strtok(line, " ", &last);
+    char* cmd = apr_strtok(line, SEP_CHAR, &last);
     int i = 0, counter = 0;
     if (!cmd || apr_strnatcmp(cmd, "cookie") != 0) {
         config.cookie_op = 3;
@@ -74,14 +74,14 @@ bool parse_cookie(request_rec* r, char* line) {
         return false;
     }
     
-    key = apr_strtok(NULL, " ", &last);
+    key = apr_strtok(NULL, SEP_CHAR, &last);
     if (!key) {
         config.cookie_op = 3;
         error(r->server, log_header"disable cookie for key not set");
         return false;
     }
     for(i = 0; i < MAX_CONFIG_VALUE_LEN; i++) {
-        value = apr_strtok(NULL, " ", &last);
+        value = apr_strtok(NULL, SEP_CHAR, &last);
         if (!value) {
             break;
         }
@@ -103,7 +103,7 @@ bool parse_cookie(request_rec* r, char* line) {
 bool parse_refer(request_rec* r, char* line) {
     char* last = NULL;
     char* value = NULL;
-    char* cmd = apr_strtok(line, "", &last);
+    char* cmd = apr_strtok(line, SEP_CHAR, &last);
     int i = 0, counter = 0;
     if (!cmd || apr_strnatcmp(cmd, "refer") != 0) {
         config.refer_op = 3;
@@ -111,7 +111,7 @@ bool parse_refer(request_rec* r, char* line) {
         return false;
     }
     for(i = 0; i < MAX_CONFIG_VALUE_LEN; i++) {
-        value = apr_strtok(NULL, " ", &last);
+        value = apr_strtok(NULL, SEP_CHAR, &last);
         if (!value) {
             break;
         }
@@ -133,7 +133,7 @@ bool parse_refer(request_rec* r, char* line) {
 bool parse_uri(request_rec* r, char* line) {
     char* last = NULL;
     char* value = NULL;
-    char* cmd = apr_strtok(line, "", &last);
+    char* cmd = apr_strtok(line, SEP_CHAR, &last);
     int i = 0, counter = 0;
     if (!cmd || apr_strnatcmp(cmd, "uri") != 0) {
         config.uri_op = 3;
@@ -141,7 +141,7 @@ bool parse_uri(request_rec* r, char* line) {
         return false;
     }
     for(i = 0; i < MAX_CONFIG_VALUE_LEN; i++) {
-        value = apr_strtok(NULL, " ", &last);
+        value = apr_strtok(NULL, SEP_CHAR, &last);
         if (!value) {
             break;
         }
@@ -162,13 +162,13 @@ bool parse_uri(request_rec* r, char* line) {
 
 bool parse_target(request_rec* r, char* line) {
     char* last = NULL;
-    char* cmd = apr_strtok(line, " ", &last);
+    char* cmd = apr_strtok(line, SEP_CHAR, &last);
     if (!cmd || apr_strnatcmp(cmd, "target") != 0) {
         config.target = NULL;
         error(r->server, log_header"disable redirect for parse target cmd error %s.", cmd);
         return false;
     }
-    char* value = apr_strtok(NULL, " ", &last);
+    char* value = apr_strtok(NULL, SEP_CHAR, &last);
     if (!value) {
         error(r->server, log_header"target value not set");
         config.target = NULL;
@@ -182,14 +182,14 @@ bool parse_target(request_rec* r, char* line) {
 bool parse_enabled(request_rec* r, char* line) {
     char* last = NULL;
     char* value = NULL;
-    char* cmd = apr_strtok(line, " ", &last);
+    char* cmd = apr_strtok(line, SEP_CHAR, &last);
     if (!cmd || apr_strnatcmp(cmd, "enabled") != 0) {
         config.enabled = false;
         error(r->server, log_header"disable redirect for parse enabled cmd error %s.", cmd);
         return false;
     }
     
-    value = apr_strtok(NULL, " ", &last);
+    value = apr_strtok(NULL, SEP_CHAR, &last);
     if (!value) {
         debug(r->server, log_header"disable redirect for value not set");
         config.enabled = false;
@@ -214,6 +214,7 @@ bool parse_config(request_rec* r, ap_configfile_t* f) {
 
     while(!(ap_cfg_getline(line, MAX_LINE_LEN, f))) {
         copy = apr_pstrdup(r->pool, line);
+        copy = trim_space(copy);
         if (start_with(copy, "probability")) {
             valid = parse_probability(r, copy);
         } else if (start_with(copy, "target")) {
@@ -229,6 +230,9 @@ bool parse_config(request_rec* r, ap_configfile_t* f) {
             valid = parse_refer(r, copy);
         } else if (start_with(line, "enabled")) {
             valid = parse_enabled(r, copy);
+        } else if (copy[0] == NULL) {
+            debug(r->server, log_header"ignore empty line");
+            continue;
         } else {
             error(r->server, log_header"meet unknown command %s", copy);
             valid = false;
