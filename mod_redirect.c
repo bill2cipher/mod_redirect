@@ -60,8 +60,8 @@ static bool conform_cookie(request_rec* r) {
     ap_cookie_read(r, config.cookie_key, &value, 0);
     debug(r->server, log_header"read cookie %s", value);
     if (value == NULL) {
-        return false;
-    } else if (contain_values(value, config.cookie_value)) {
+        return true;
+    } else if (apr_strnatcmp(config.cookie_value[0], value) == 0) {
         return false;
     }
     return true;
@@ -91,7 +91,7 @@ static bool conform_rule(request_rec *r){
     fields = apr_table_elts(r->headers_in);
     e = (apr_table_entry_t *)fields->elts;
     for (i = 0; i < fields->nelts; i++) {
-        if (apr_strnatcmp(e[i].key, "Referer") == 0) {
+        if (apr_strnatcasecmp(e[i].key, "referer") == 0) {
             refer_check = conform_refer(e[i].val);
             debug(r->server, log_header"check refer %s with conform %d", e[i].val, refer_check);
             break;
