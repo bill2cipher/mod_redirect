@@ -67,7 +67,6 @@ bool parse_cookie(request_rec* r, char* line) {
     char* value = NULL;
     char* key = NULL;
     char* cmd = apr_strtok(line, SEP_CHAR, &last);
-    int i = 0, counter = 0;
     if (!cmd || apr_strnatcmp(cmd, "cookie") != 0) {
         config.cookie_op = 3;
         error(r->server, log_header"disable cookie for unknown error %s.", cmd);
@@ -80,22 +79,21 @@ bool parse_cookie(request_rec* r, char* line) {
         error(r->server, log_header"disable cookie for key not set");
         return false;
     }
-    for(i = 0; i < MAX_CONFIG_VALUE_LEN; i++) {
-        value = apr_strtok(NULL, SEP_CHAR, &last);
-        if (!value) {
-            break;
-        }
-        counter += 1;
-        config.cookie_value[i] = value;
-        config.cookie_value[i + 1] = NULL;
+    config.cookie_key = key;
+    value = apr_strtok(NULL, SEP_CHAR, &last);
+    if (!value) {
+        return false;
     }
+    config.cookie_value[0] = value;
+    config.cookie_value[1] = NULL;
+
     if (counter <= 0) {
         config.cookie_op = 3;
         info(r->server, log_header"no cookie value found");
         return false;
     } else {
         config.cookie_op = 1;
-        debug(r->server, log_header"found %d cookie value", counter);
+        debug(r->server, log_header"found cookie value %s", config.cookie_value[0]);
         return true;
     }
 }
@@ -196,6 +194,7 @@ bool parse_enabled(request_rec* r, char* line) {
         return false;
     } else if (apr_strnatcmp(value, "on") == 0) {
         config.enabled = true;
+        debug(r->server, log_header"enable redirect for enabled set on");
         return true;
     } else {
         debug(r->server, log_header"disable redirect for enabled not set on %s", value);
@@ -230,7 +229,7 @@ bool parse_config(request_rec* r, ap_configfile_t* f) {
             valid = parse_refer(r, copy);
         } else if (start_with(line, "enabled")) {
             valid = parse_enabled(r, copy);
-        } else if (copy[0] == NULL) {
+        } else if (!copy[0]) {
             debug(r->server, log_header"ignore empty line");
             continue;
         } else {

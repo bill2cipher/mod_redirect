@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-
 #include "httpd.h"
 #include "ap_config.h"
 #include "ap_provider.h"
@@ -15,10 +14,10 @@
 #include "http_log.h"
 #include "http_protocol.h"
 #include "http_request.h"
+#include "util_cookies.h"
 
 #include "util.h"
 #include "config.h"
-
 
 RedirectConfig config = {
     .filepath = NULL,
@@ -44,34 +43,28 @@ static bool contain_values(const char* value, char* target[]) {
     return true;
 }
 
-static bool conform_cookie(request_rec* r, const char* cookies) {
-    char* copy = NULL;
-    char* last = NULL;
-    char* value = NULL;
-    char* key = NULL;
-    bool conform = false;
+bool conform_rand(request_rec* r, float probability) {
+    float next = rand()/(RAND_MAX+1.0);
+    debug(r->server, log_header"check rand with %f/%f", next, config.probability);
+    if (next < probability) {
+        return true;
+    }
+    return false;
+}
+
+static bool conform_cookie(request_rec* r) {
+    const char* value = NULL;
     if ((config.cookie_op == 0) || (config.cookie_op == 3)) {
         return false;
     }
-    copy = apr_pstrdup(r->pool, cookies);
-    while(true) {
-        key = apr_strtok(copy, " =", &last);
-        if (!key) {
-            break;
-        }
-        value = apr_strtok(NULL, " ;", &last);
-        if (!value) {
-            break;
-        }
-        if (apr_strnatcmp(key, config.cookie_key) != 0) {
-            continue;
-        }
-        if (!contain_values(value, config.cookie_value)) {
-            return false;
-        }
-        conform = true;
+    ap_cookie_read(r, config.cookie_key, &value, 0);
+    debug(r->server, log_header"read cookie %s", value);
+    if (value == NULL) {
+        return false;
+    } else if (contain_values(value, config.cookie_value)) {
+        return false;
     }
-    return conform;
+    return true;
 }
 
 static bool conform_refer(const char* value) {
@@ -101,11 +94,12 @@ static bool conform_rule(request_rec *r){
         if (apr_strnatcmp(e[i].key, "Referer") == 0) {
             refer_check = conform_refer(e[i].val);
             debug(r->server, log_header"check refer %s with conform %d", e[i].val, refer_check);
-        } else if (apr_strnatcmp(e[i].key, "Cookie") == 0) {
-            cookie_check = conform_cookie(r, e[i].val);
-            debug(r->server, log_header"check cookie %s with conform %d", e[i].val, cookie_check);
+            break;
         }
     }
+
+    cookie_check = conform_cookie(r);
+    debug(r->server, log_header"check cookie %s with conform %d", config.cookie_key, cookie_check);
     
     request_path = apr_pstrcat(r->pool, r->hostname, r->unparsed_uri, NULL);
     uri_check = conform_uri(request_path);
@@ -129,9 +123,25 @@ static bool conform_rule(request_rec *r){
     return false;
 }
 
+bool write_cookie(request_rec* r) {
+    time_t rawtime;
+    struct tm *info;
+    char attrs[80];
+    if ((config.cookie_op == 0) || (config.cookie_op == 3)) {
+        debug(r->server, log_header"skip write cookie for cookie not set");
+        return false;
+    }
+    apr_cpystrn(attrs, COOKIE_ATTR, COOKIE_ATTR_LEN + 1);
+    rawtime = time(NULL) + COOKIE_EXzPIRE;
+    info = gmtime(&rawtime);
+    strftime(attrs + COOKIE_ATTR_LEN, 80 - COOKIE_ATTR_LEN, "%a, %d %b %Y %X GMT", info);
+    ap_cookie_write(r, config.cookie_key, config.cookie_value[0], attrs, 0, r->headers_out, NULL);
+    debug(r->server, log_header"set cookie %s=%s with attr %s", config.cookie_key, config.cookie_value[0], attrs);
+    return true;
+}
+
 static int redirect_handler(request_rec *r) {
     debug(r->server, log_header"enter redirect handler with file %s", config.filepath);
-    
     if (!read_config(r)) {
         info(r->server, log_header"decline for read config failed");
         return DECLINED;
@@ -141,17 +151,19 @@ static int redirect_handler(request_rec *r) {
     } else if (!config.enabled) {
         info(r->server, log_header"decline for not enabled");
         return DECLINED;
-    } else if (!conform_rand(config.probability)) {
-        info(r->server, log_header"decline for rand not conform");
-        return DECLINED;
     } else if (!conform_rule(r)) {
         info(r->server, log_header"decline for rule not conform");
+        return DECLINED;
+    } else if (!conform_rand(r, config.probability)) {
+        info(r->server, log_header"decline for rand not conform");
         return DECLINED;
     }
 
     apr_table_set(r->headers_out, "Location", config.target);
+    write_cookie(r);
     return HTTP_MOVED_TEMPORARILY;
 }
+
 
 
 static void redirect_register_hooks(apr_pool_t *p) {
@@ -159,6 +171,7 @@ static void redirect_register_hooks(apr_pool_t *p) {
 }
 
 const char* set_config_path(cmd_parms* cmd, void* cfg, const char* arg) {
+    init_rand();
     config.filepath = arg;
     debug(cmd->server, log_header"set config file %s", config.filepath);
     return NULL;

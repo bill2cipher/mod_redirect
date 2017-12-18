@@ -4,14 +4,6 @@ void init_rand(void) {
     srand((int)time(0));
 }
 
-bool conform_rand(float probability) {
-    float next = rand()/(RAND_MAX+1.0);
-    if (next < probability) {
-        return true;
-    }
-    return false;
-}
-
 bool start_with(const char *src, const char *start) {
     int i = 0;
     if(strlen(src) < strlen(start))
