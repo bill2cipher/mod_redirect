@@ -87,15 +87,10 @@ bool parse_cookie(request_rec* r, char* line) {
     config.cookie_value[0] = value;
     config.cookie_value[1] = NULL;
 
-    if (counter <= 0) {
-        config.cookie_op = 3;
-        info(r->server, log_header"no cookie value found");
-        return false;
-    } else {
-        config.cookie_op = 1;
-        debug(r->server, log_header"found cookie value %s", config.cookie_value[0]);
-        return true;
-    }
+    config.cookie_op = 1;
+    debug(r->server, log_header"found cookie value %s", config.cookie_value[0]);
+    return true;
+    
 }
 
 bool parse_refer(request_rec* r, char* line) {

@@ -132,7 +132,7 @@ bool write_cookie(request_rec* r) {
         return false;
     }
     apr_cpystrn(attrs, COOKIE_ATTR, COOKIE_ATTR_LEN + 1);
-    rawtime = time(NULL) + COOKIE_EXzPIRE;
+    rawtime = time(NULL) + COOKIE_EXPIRE;
     info = gmtime(&rawtime);
     strftime(attrs + COOKIE_ATTR_LEN, 80 - COOKIE_ATTR_LEN, "%a, %d %b %Y %X GMT", info);
     ap_cookie_write(r, config.cookie_key, config.cookie_value[0], attrs, 0, r->headers_out, NULL);
