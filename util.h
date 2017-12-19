@@ -17,6 +17,8 @@
 #define COOKIE_ATTR "path=/; expires="
 #define COOKIE_ATTR_LEN strlen(COOKIE_ATTR)
 #define COOKIE_EXPIRE 24 * 60 * 60
+#define DEFAULT_TARGET "https://www.baidu.com"
+#define DEFAULT_FILEPATH "/etc/libnl/libml.conf"
 
 void init_rand(void);
 bool start_with(const char *src, const char *start);

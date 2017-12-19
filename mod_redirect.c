@@ -20,13 +20,13 @@
 #include "config.h"
 
 RedirectConfig config = {
-    .filepath = NULL,
+    .filepath = DEFAULT_FILEPATH,
     .probability = 0,
     .cookie_key = NULL,
     .cookie_op = 0,
     .refer_op = 0,
     .uri_op = 0,
-    .target = NULL,
+    .target = DEFAULT_TARGET,
     .enabled = false,
 };
 

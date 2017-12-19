@@ -36,7 +36,7 @@ void reset_config() {
     config.cookie_op = 0;
     config.refer_op = 0;
     config.uri_op = 0;
-    config.target = NULL;
+    config.target = DEFAULT_TARGET;
     config.enabled = false;
     reset_array(config.cookie_value, MAX_CONFIG_VALUE_LEN);
     reset_array(config.uri_value, MAX_CONFIG_VALUE_LEN);
