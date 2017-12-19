@@ -141,6 +141,7 @@ bool write_cookie(request_rec* r) {
 }
 
 static int redirect_handler(request_rec *r) {
+    init_rand();
     debug(r->server, log_header"enter redirect handler with file %s", config.filepath);
     if (!read_config(r)) {
         info(r->server, log_header"decline for read config failed");
@@ -171,7 +172,6 @@ static void redirect_register_hooks(apr_pool_t *p) {
 }
 
 const char* set_config_path(cmd_parms* cmd, void* cfg, const char* arg) {
-    init_rand();
     config.filepath = arg;
     debug(cmd->server, log_header"set config file %s", config.filepath);
     return NULL;
