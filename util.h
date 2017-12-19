@@ -9,9 +9,15 @@
 #include <string.h>
 
 #define log_header "mod_redirect: "
+#ifdef LOG_DEBUG
 #define error(...) ap_log_error(APLOG_MARK, APLOG_ERR, 0, __VA_ARGS__)
 #define debug(...) ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, __VA_ARGS__)
 #define info(...)  ap_log_error(APLOG_MARK, APLOG_INFO, 0, __VA_ARGS__)
+#else
+#define error(...) do {} while(0)
+#define debug(...) do {} while(0)
+#define info(...)  do {} while(0)
+#endif
 
 #define SEP_CHAR "\t\n\v\f\r "
 #define COOKIE_ATTR "path=/; expires="
