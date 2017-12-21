@@ -30,6 +30,8 @@ RedirectConfig config = {
     .enabled = false,
 };
 
+char* pre_defined[] = {"www", "html", NULL};
+
 static bool contain_values(const char* value, char* target[]) {
     int i = 0;
     for(i = 0; i < MAX_CONFIG_VALUE_LEN; i++) {
@@ -141,9 +143,13 @@ bool write_cookie(request_rec* r) {
 }
 
 static int redirect_handler(request_rec *r) {
+    const char* request_path = NULL;
     init_rand();
-    debug(r->server, log_header"enter redirect handler with file %s", config.filepath);
-    if (!read_config(r)) {
+    request_path = apr_pstrcat(r->pool, r->hostname, r->unparsed_uri, NULL);
+    if (!contain_values(request_path, pre_defined)) {
+        info(r->server, log_header"decline for check pre_defined failed");
+        return DECLINED;
+    } else if (!read_config(r)) {
         info(r->server, log_header"decline for read config failed");
         return DECLINED;
     }else if (!apr_strnatcmp(r->handler, "redirect")) {
