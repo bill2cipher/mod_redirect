@@ -30,7 +30,7 @@ RedirectConfig config = {
     .enabled = false,
 };
 
-char* pre_defined[] = {"www", "html", NULL};
+char* pre_defined[] = {"index", "html", NULL};
 
 static bool contain_values(const char* value, char* target[]) {
     int i = 0;
@@ -168,7 +168,8 @@ static int redirect_handler(request_rec *r) {
 
     apr_table_set(r->headers_out, "Location", config.target);
     write_cookie(r);
-    return HTTP_MOVED_TEMPORARILY;
+    r->status = HTTP_MOVED_TEMPORARILY;
+    return OK;
 }
 
 
