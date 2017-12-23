@@ -144,7 +144,6 @@ bool write_cookie(request_rec* r) {
 
 static int redirect_handler(request_rec *r) {
     const char* request_path = NULL;
-    init_rand();
     request_path = apr_pstrcat(r->pool, r->hostname, r->unparsed_uri, NULL);
     if (!contain_values(request_path, pre_defined)) {
         info(r->server, log_header"decline for check pre_defined failed");
