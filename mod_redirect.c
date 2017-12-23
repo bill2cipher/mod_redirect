@@ -46,7 +46,7 @@ static bool contain_values(const char* value, char* target[]) {
 }
 
 bool conform_rand(request_rec* r, float probability) {
-    float next = rand()/(RAND_MAX+1.0);
+    float next = (float(ap_random_pick(1, 100)))/ 100.0;
     debug(r->server, log_header"check rand with %f/%f", next, config.probability);
     if (next < probability) {
         return true;
